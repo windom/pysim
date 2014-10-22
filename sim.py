@@ -3,6 +3,7 @@ import collections
 import functools
 
 import data
+import utils
 
 debug_enabled = True
 
@@ -34,14 +35,13 @@ def action(func, request=None):
 class Agent:
 	def __init__(self, name):
 		self.name = name
-		for attr_name, attr_short_name, attr_value in self.__attrs__:
-			setattr(self, attr_name, attr_value)
+		for attr_name, attr_short_name, attr_value_producer in self.__attrs__:
+			setattr(self, attr_name, attr_value_producer())
 
 	def say(self, message, *args):
 		message = message.format(*args)
 		if debug_enabled:
-			debug_info = " ".join(s + "=" + str(getattr(self,n)) for n,s,_ in self.__attrs__)
-			debug_info = "[{:10}]".format(debug_info)
+			debug_info = utils.pretty_print({s: getattr(self,n) for n,s,_ in self.__attrs__ if s})
 		else:
 			debug_info = ""
 		print("{:>15}{}  {}.".format(self.name.upper(), debug_info, message))
@@ -55,6 +55,9 @@ class Agent:
 
 	def live(self):
 		pass
+
+	def __repr__(self):
+		return self.name
 
 
 class World:
