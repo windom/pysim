@@ -11,9 +11,6 @@ class Coder(sim.Agent):
 	             ("codelines", "cod", lambda: 0),
 	             ("relation", "", lambda: collections.defaultdict(int))]
 
-	def __init__(self, name):
-		super().__init__(name)
-
 	@sim.action("kv")
 	def drink_coffee(self, pair=None):
 		if pair:
@@ -42,6 +39,6 @@ class Coder(sim.Agent):
 				yield from self.write_code()
 
 
-w = sim.World([Coder(data.random_noun("names")) for _ in range(10)])
+w = sim.World([Coder() for _ in range(10)])
 for _ in range(100):
 	w.day()

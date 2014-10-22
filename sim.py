@@ -33,8 +33,11 @@ def action(func, request=None):
 
 
 class Agent:
-	def __init__(self, name):
-		self.name = name
+	def __init__(self, name=None):
+		if name is None:
+			self.name = data.random_noun("names")
+		else:
+			self.name = name
 		for attr_name, attr_short_name, attr_value_producer in self.__attrs__:
 			setattr(self, attr_name, attr_value_producer())
 
