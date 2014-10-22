@@ -1,8 +1,6 @@
+import random
 
-with open("names_hu.txt") as f:
-	names = [line.strip() for line in f]
-
-def withify(noun):
+def withify_gen(noun):
 	if noun[-1] in 'aou':
 		return noun + "val"
 	elif noun[-1] in 'ei':
@@ -34,3 +32,33 @@ def withify(noun):
 			suf += 'el'		
 		return noun + suf
 
+def correct_nouns(source_file, dest_file):
+	with open(source_file) as sf, open(dest_file, 'w') as df:
+		for line in sf:
+			noun = line.strip()
+			print(noun, withify_gen(noun), file=df, sep=',')
+
+def load_nouns(source_file):
+	result = {}
+	with open(source_file) as f:
+		for line in f:
+			elements = line.strip().split(',')
+			result[elements[0]] = tuple(elements[1:])
+	return result
+
+
+nouns = {}
+noun_forms = {}
+
+def register_nouns(category, source_file):
+	result = load_nouns(source_file)
+	nouns[category] = list(result.keys())
+	noun_forms.update(result)
+
+def withify(noun):
+	return noun_forms[noun][0]
+
+def random_noun(category):
+	return random.choice(nouns[category])
+
+register_nouns("names", "names_hu.txt")

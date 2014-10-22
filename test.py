@@ -34,7 +34,7 @@ class Agent:
 		self.name = name
 
 	def say(self, message):
-		print("{}: {}".format(self.name, message))
+		print("{:>15}  {}.".format(self.name.upper(), message))
 
 	@action
 	def wait(self):
@@ -82,7 +82,7 @@ class Agent:
 
 class World:
 	def __init__(self):
-		self.agents = [Agent(random.choice(data.names)) for _ in range(5)]
+		self.agents = [Agent(data.random_noun("names")) for _ in range(5)]
 		
 		self.lives = [agent.live(self) for agent in self.agents]
 		for live in self.lives:
@@ -92,7 +92,7 @@ class World:
 		used_agents = set()
 		responses = collections.defaultdict(lambda: None)
 
-		def associate(agent, pair_agen):
+		def associate(agent, pair_agent):
 			responses[agent] = pair_agent
 			used_agents.add(pair_agent)
 
@@ -106,9 +106,7 @@ class World:
 
 		return responses
 
-	def day(self):		
-		print("-" * 20)
-
+	def day(self):
 		requests = []
 		for agent, live in zip(self.agents, self.lives):
 			request = next(live)
@@ -118,6 +116,8 @@ class World:
 		responses = self.produce_responses(requests)
 		for agent, live in zip(self.agents, self.lives):
 			live.send(responses[agent])
+
+		print()
 
 
 w = World()
