@@ -18,12 +18,17 @@ def optional_arg_decorator(fn):
 	return wrapped_decorator
 
 
+def do_action(request=None):
+	yield
+	pair_agent = yield request
+	return pair_agent
+
+
 @optional_arg_decorator
 def action(func, request=None):
 	@functools.wraps(func)
 	def wrapped(*args, **kwargs):
-		yield
-		pair_agent = yield request
+		pair_agent = yield from do_action(request)
 		if not pair_agent is None:
 			kwargs["pair"] = pair_agent
 		result = func(*args, **kwargs)
@@ -65,7 +70,7 @@ class Agent:
 
 class World:
 	def __init__(self, agents):
-		self.agents = agents		
+		self.agents = agents
 		self.lives = [agent.live(self) for agent in self.agents]
 		for live in self.lives:
 			next(live)
@@ -77,6 +82,8 @@ class World:
 		def associate(agent, pair_agent):
 			responses[agent] = pair_agent
 			used_agents.add(pair_agent)
+
+		random.shuffle(requests)
 
 		for agent, request in requests:
 			if not agent in used_agents:
