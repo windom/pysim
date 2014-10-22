@@ -2,6 +2,7 @@ import random
 import collections
 import functools
 
+import data
 
 def optional_arg_decorator(fn):
 	def wrapped_decorator(*args, **kwargs):
@@ -42,14 +43,14 @@ class Agent:
 	@action("barat")
 	def baratkozas(self, pair=None):
 		if pair:
-			self.say("Baratkozok " + pair.name + "-val")
+			self.say("Baratkozok " + data.withify(pair.name))
 		else:
 			self.say("Baratkoztam volna, de nem volt kivel")
 
 	@action("dugas")
 	def dugas(self, pair=None):
 		if pair:
-			self.say("Dugok " + pair.name + "-val")
+			self.say("Dugok " + data.withify(pair.name))
 		else:
 			self.say("Dugtam volna, de nem volt kivel")
 
@@ -61,7 +62,7 @@ class Agent:
 	@action("all")
 	def alldogalas(self, pair=None):
 		if pair:
-			self.say("Alldogalok " + pair.name + "-val")
+			self.say("Alldogalok " + data.withify(pair.name))
 		else:
 			self.say("Alldogalok egyedul")
 
@@ -81,7 +82,7 @@ class Agent:
 
 class World:
 	def __init__(self):
-		self.agents = list(map(Agent,["Pista","Geza","Gyula","Emma","Ferenc","Gergo","Jonas"]))
+		self.agents = [Agent(random.choice(data.names)) for _ in range(5)]
 		
 		self.lives = [agent.live(self) for agent in self.agents]
 		for live in self.lives:
@@ -92,8 +93,8 @@ class World:
 		responses = collections.defaultdict(lambda: None)
 
 		def associate(agent, pair_agen):
-			responses[agent] = pair_agen
-			used_agents.add(pair_agen)
+			responses[agent] = pair_agent
+			used_agents.add(pair_agent)
 
 		for agent, request in requests:
 			if not agent in used_agents:
