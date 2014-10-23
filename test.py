@@ -3,6 +3,7 @@ import collections
 
 import data
 import sim
+from sim import action, do_action, shares, needs, offers
 
 
 class Coder(sim.Agent):
@@ -11,25 +12,52 @@ class Coder(sim.Agent):
                  ("codelines", "cod", lambda: 0),
                  ("relation", "", lambda: collections.defaultdict(int))]
 
-    @sim.action("kv")
+    @action(shares("coffe"))
     def drink_coffee(self, pair=None):
         if pair:
             self.say("Kavezok {}", data.withify(pair.name))
-            self.relation[pair] += 1
+            self.together(pair)
         else:
             self.say("Kavezok egyedul")
         self.caffeine += 5
 
-    @sim.action
     def write_code(self):
-        if self.caffeine >= 8:
-            self.say("Tele vagyok energiaval. Nagyon kodolok")
-            self.codelines += 2
+        def coding():
+            if self.caffeine >= 8:
+                self.codelines += 2
+                boosted = True
+            else:
+                self.codelines += 1
+                boosted = False
+            return boosted
+
+        if self.roll(10):
+            pair = yield from do_action(needs("codehelp"))
+            if pair:
+                boosted = coding()
+                self.say("Elakadtam de segit {}, {}", pair.name,
+                         "nagyon kodolunk" if boosted else "kodolunk")
+            else:
+                self.say("Elakadtam es nincs aki segitsen")
         else:
-            self.say("Kodolok")
-            self.codelines += 1
+            pair = yield from do_action(offers("codehelp"))
+            if pair:
+                self.say("Dolgozunk {} problemajan, segitek neki", pair.name)
+            else:
+                boosted = coding()
+                if boosted:
+                    self.say("Tele vagyok energiaval, nagyon kodolok")
+                else:
+                    self.say("Kodolok")
+
+        self.together(pair)
+
         if self.roll(50):
             self.caffeine -= 1
+
+    def together(self, pair, relation_inc=1):
+        if pair:
+            self.relation[pair] += relation_inc
 
     def live(self, world):
         while True:

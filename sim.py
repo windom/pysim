@@ -5,30 +5,33 @@ import functools
 import data
 import utils
 
+
 debug_enabled = True
 
-def optional_arg_decorator(fn):
-    def wrapped_decorator(*args, **kwargs):
-        if len(args) == 1 and callable(args[0]):
-            return fn(args[0])
-        else:
-            def real_decorator(decoratee):
-                return fn(decoratee, *args, **kwargs)
-            return real_decorator
-    return wrapped_decorator
+
+requestItem = collections.namedtuple('requestItem','code needs offers')
+
+def shares(request_code):
+    return requestItem(request_code, True, True)
+
+def needs(request_code):
+    return requestItem(request_code, True, False)
+
+def offers(request_code):
+    return requestItem(request_code, False, True)
 
 
-def do_action(request=None):
+def do_action(*request):
     yield
     pair_agent = yield request
     return pair_agent
 
 
-@optional_arg_decorator
-def action(func, request=None):
+@utils.optional_arg_decorator
+def action(func, *request):
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        pair_agent = yield from do_action(request)
+        pair_agent = yield from do_action(*request)
         if not pair_agent is None:
             kwargs["pair"] = pair_agent
         result = func(*args, **kwargs)
@@ -83,11 +86,23 @@ class World:
             responses[agent] = pair_agent
             used_agents.add(pair_agent)
 
+        def request_needs_anything(request):
+            return any(needs for _, needs, _ in request)
+
+        def request_satisfied(srequest, drequest):
+            def item_satisfied(scode):
+                return any(True for dcode, dneeds, doffers in drequest
+                           if doffers and dcode == scode)
+            return all(item_satisfied(scode) for scode, sneeds, _ in srequest if sneeds)
+
         random.shuffle(requests)
 
         for agent, request in requests:
-            if not agent in used_agents:
-                possible_agents = [a for (a, r) in requests if (a != agent) and (r == request) and (not a in used_agents)]
+            if (not agent in used_agents) and request_needs_anything(request):
+                possible_agents = [a for (a, r) in requests if \
+                        (a != agent) and \
+                        request_satisfied(request, r) and \
+                        (not a in used_agents)]
                 if possible_agents:
                     pair_agent = random.choice(possible_agents)
                     associate(agent, pair_agent)
@@ -99,7 +114,7 @@ class World:
         requests = []
         for agent, live in zip(self.agents, self.lives):
             request = next(live)
-            if not request is None:
+            if request:
                 requests.append((agent, request))
 
         responses = self.produce_responses(requests)
@@ -107,3 +122,4 @@ class World:
             live.send(responses[agent])
 
         print()
+
