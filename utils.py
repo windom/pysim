@@ -1,3 +1,4 @@
+import re
 from functools import singledispatch
 
 
@@ -20,3 +21,8 @@ def optional_arg_decorator(fn):
                 return fn(decoratee, *args, **kwargs)
             return real_decorator
     return wrapped_decorator
+
+
+def wrap_lines(text, chars=80):
+    regex = r".{1," + str(chars) + "}(?:\s+|$)"
+    return "\n".join(line.strip() for line in re.findall(regex, text))

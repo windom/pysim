@@ -1,6 +1,8 @@
 import random
 import itertools
 
+import utils
+
 
 class tok:
     def __init__(self, text):
@@ -9,10 +11,16 @@ class tok:
     def gen(self, rules):
         yield self.text
 
+    def __repr__(self):
+        return "{}({!r})".format(type(self).__name__, self.text)
+
 
 class toks:
     def __init__(self, *tokens):
         self.rules = list(map(rule, tokens))
+
+    def __repr__(self):
+        return "{}{}".format(type(self).__name__, tuple(self.rules))
 
 
 class alt(toks):
@@ -26,16 +34,22 @@ class seq(toks):
 
 
 class ref:
+    name_prefix = '@'
+
     def __init__(self, name):
         self.name = name
 
     def gen(self, rules):
         yield from rules.gen(self.name)
 
+    def __repr__(self):
+        return "{}({!r})".format(type(self).__name__,
+                                 self.name_prefix + self.name)
+
 
 def rule(token):
     if isinstance(token, str):
-        if token[0] == "@":
+        if token[0] == ref.name_prefix:
             return ref(token[1:])
         else:
             return tok(token)
@@ -78,3 +92,4 @@ hello = rules({
     })
 
 print(hello["ketudv"])
+print(utils.wrap_lines(repr(hello), 80))
