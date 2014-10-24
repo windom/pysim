@@ -32,15 +32,20 @@ class Coder(sim.Agent):
             return boosted
 
         if self.roll(10):
-            pair = yield from do_action(needs("codehelp"))
-            if pair:
-                boosted = coding()
-                self.say("Elakadtam de segit {}, {}", pair.name,
-                         "nagyon kodolunk" if boosted else "kodolunk")
-            else:
-                self.say("Elakadtam es nincs aki segitsen")
+            while True:
+                pair = yield from do_action(needs("codehelp"))
+                if pair:
+                    boosted = coding()
+                    self.say("Elakadtam de segit {}, {}", pair.name,
+                             "nagyon kodolunk" if boosted else "kodolunk")
+                    break
+                else:
+                    self.say("Elakadtam es nincs aki segitsen")
         else:
-            pair = yield from do_action(offers("codehelp"))
+            if self.roll(50):
+                pair = yield from do_action(offers("codehelp"))
+            else:
+                pair = yield from do_action()
             if pair:
                 self.say("Dolgozunk {} problemajan, segitek neki", pair.name)
             else:
