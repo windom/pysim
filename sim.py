@@ -9,16 +9,16 @@ import utils
 debug_enabled = True
 
 
-requestItem = collections.namedtuple('requestItem','code needs offers')
+requestItem = collections.namedtuple('requestItem','code needs offers condition')
 
-def shares(request_code):
-    return requestItem(request_code, True, True)
+def shares(request_code, condition=None):
+    return requestItem(request_code, True, True, condition)
 
-def needs(request_code):
-    return requestItem(request_code, True, False)
+def needs(request_code, condition=None):
+    return requestItem(request_code, True, False, condition)
 
-def offers(request_code):
-    return requestItem(request_code, False, True)
+def offers(request_code, condition=None):
+    return requestItem(request_code, False, True, condition)
 
 
 def do_action(*request):
@@ -87,13 +87,16 @@ class World:
             used_agents.add(pair_agent)
 
         def request_needs_anything(request):
-            return any(needs for _, needs, _ in request)
+            return any(needs for _, needs, _, _ in request)
 
-        def request_satisfied(srequest, drequest):
+        def request_satisfied(sagent, srequest, dagent, drequest):
+            def cond_satisfied(cond, agent):
+                return (not cond) or cond(agent)
             def item_satisfied(scode):
-                return any(True for dcode, dneeds, doffers in drequest
-                           if doffers and dcode == scode)
-            return all(item_satisfied(scode) for scode, sneeds, _ in srequest if sneeds)
+                return any(True for dcode, _, doffers, dcond in drequest
+                           if doffers and dcode == scode and cond_satisfied(dcond, sagent))
+            return all(cond_satisfied(scond, dagent) and item_satisfied(scode)
+                       for scode, sneeds, _, scond in srequest if sneeds)
 
         random.shuffle(requests)
 
@@ -101,7 +104,7 @@ class World:
             if (not agent in used_agents) and request_needs_anything(request):
                 possible_agents = [a for (a, r) in requests if \
                         (a != agent) and \
-                        request_satisfied(request, r) and \
+                        request_satisfied(agent, request, a, r) and \
                         (not a in used_agents)]
                 if possible_agents:
                     pair_agent = random.choice(possible_agents)
@@ -122,4 +125,3 @@ class World:
             live.send(responses[agent])
 
         print()
-
