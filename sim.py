@@ -48,10 +48,12 @@ class Agent:
         pair_agent = yield request
         return pair_agent
 
+    def debug_info(self):
+        return {s: getattr(self,n) for n,s,_ in self.__attrs__ if s}
+
     def say(self, message, *args):
         message = message.format(*args)
-        debug_info = {s: getattr(self,n) for n,s,_ in self.__attrs__ if s}
-        self.result.append((self, message, debug_info))
+        self.result.append((self, message))
 
     def roll(self, chance):
         return random.randint(1, 100) <= chance
@@ -73,9 +75,9 @@ class TextRenderer:
         self.show_debug = show_debug
 
     def render(self, results):
-        for agent, message, debug_info in results:
+        for agent, message in results:
             if self.show_debug:
-                debug_str = utils.pretty_print(debug_info)
+                debug_str = utils.pretty_print(agent.debug_info())
             else:
                 debug_str = ""
             print("{:>15}{}  {}.".format(agent.name.upper(), debug_str, message),
