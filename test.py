@@ -3,7 +3,7 @@ import collections
 
 import data
 import sim
-from sim import action, do_action, shares, needs, offers
+from sim import action, shares, needs, offers
 
 
 class Coder(sim.Agent):
@@ -33,7 +33,7 @@ class Coder(sim.Agent):
 
         if self.roll(10):
             while True:
-                pair = yield from do_action(needs("codehelp"))
+                pair = yield from self.do_action(needs("codehelp"))
                 if pair:
                     boosted = coding()
                     self.say("Elakadtam de segit {}, {}", pair.name,
@@ -43,9 +43,9 @@ class Coder(sim.Agent):
                     self.say("Elakadtam es nincs aki segitsen")
         else:
             if self.roll(50):
-                pair = yield from do_action(offers("codehelp"))
+                pair = yield from self.do_action(offers("codehelp"))
             else:
-                pair = yield from do_action()
+                pair = yield from self.do_action()
             if pair:
                 self.say("Dolgozunk {} problemajan, segitek neki", pair.name)
             else:
@@ -72,6 +72,6 @@ class Coder(sim.Agent):
                 yield from self.write_code()
 
 
-w = sim.World([Coder() for _ in range(10)])
-for _ in range(100):
+w = sim.World([Coder() for _ in range(10)], sim.TextRenderer(show_debug=True))
+for _ in range(20):
     w.day()

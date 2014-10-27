@@ -1,12 +1,10 @@
 import random
 import collections
 import functools
+import sys
 
 import data
 import utils
-
-
-debug_enabled = True
 
 
 requestItem = collections.namedtuple('requestItem','code needs offers condition')
@@ -21,17 +19,11 @@ def offers(request_code, condition=None):
     return requestItem(request_code, False, True, condition)
 
 
-def do_action(*request):
-    yield
-    pair_agent = yield request
-    return pair_agent
-
-
 @utils.optional_arg_decorator
 def action(func, *request):
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        pair_agent = yield from do_action(*request)
+        pair_agent = yield from args[0].do_action(*request)
         if not pair_agent is None:
             kwargs["pair"] = pair_agent
         result = func(*args, **kwargs)
@@ -46,16 +38,20 @@ class Agent:
             self.name = data.random_noun("names")
         else:
             self.name = name
+        self.result = []
         for attr_name, attr_short_name, attr_value_producer in self.__attrs__:
             setattr(self, attr_name, attr_value_producer())
 
+    def do_action(self, *request):
+        result, self.result = self.result, []
+        yield result
+        pair_agent = yield request
+        return pair_agent
+
     def say(self, message, *args):
         message = message.format(*args)
-        if debug_enabled:
-            debug_info = utils.pretty_print({s: getattr(self,n) for n,s,_ in self.__attrs__ if s})
-        else:
-            debug_info = ""
-        print("{:>15}{}  {}.".format(self.name.upper(), debug_info, message))
+        debug_info = {s: getattr(self,n) for n,s,_ in self.__attrs__ if s}
+        self.result.append((self, message, debug_info))
 
     def roll(self, chance):
         return random.randint(1, 100) <= chance
@@ -71,8 +67,26 @@ class Agent:
         return self.name
 
 
+class TextRenderer:
+    def __init__(self, file=sys.stdout, show_debug=False):
+        self.file = file
+        self.show_debug = show_debug
+
+    def render(self, results):
+        for agent, message, debug_info in results:
+            if self.show_debug:
+                debug_str = utils.pretty_print(debug_info)
+            else:
+                debug_str = ""
+            print("{:>15}{}  {}.".format(agent.name.upper(), debug_str, message),
+                  file=self.file)
+
+        print(file=self.file)
+
+
 class World:
-    def __init__(self, agents):
+    def __init__(self, agents, renderer):
+        self.renderer = renderer
         self.agents = agents
         self.lives = [agent.live(self) for agent in self.agents]
         for live in self.lives:
@@ -121,7 +135,9 @@ class World:
                 requests.append((agent, request))
 
         responses = self.produce_responses(requests)
-        for agent, live in zip(self.agents, self.lives):
-            live.send(responses[agent])
 
-        print()
+        results = []
+        for agent, live in zip(self.agents, self.lives):
+            results.extend(live.send(responses[agent]))
+
+        self.renderer.render(results)
