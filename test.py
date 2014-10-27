@@ -8,9 +8,9 @@ from sim import action, shares, needs, offers
 
 class Coder(sim.Agent):
 
-    __attrs__ = [("caffeine", "caf", lambda: 5),
-                 ("codelines", "cod", lambda: 0),
-                 ("relation", "", lambda: collections.defaultdict(int))]
+    caffeine = sim.Property("caf", lambda: 5)
+    codelines = sim.Property("cod", lambda: 0)
+    relation = sim.Property("", lambda: collections.defaultdict(int))
 
     @action(shares("coffe"))
     def drink_coffee(self, pair=None):
@@ -72,6 +72,8 @@ class Coder(sim.Agent):
                 yield from self.write_code()
 
 
-w = sim.World([Coder() for _ in range(10)], sim.TextRenderer(show_debug=True))
+w = sim.World([Coder() for _ in range(10)],
+              sim.TextRenderer(show_debug=True, show_changes=True))
+
 for _ in range(20):
     w.day()

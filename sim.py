@@ -32,31 +32,79 @@ def action(func, *request):
     return wrapped
 
 
-class Agent:
+class Property:
+    def __init__(self, short_name, value_producer):
+        self.short_name = short_name
+        self.value_producer = value_producer
+
+    def __get__(self, instance, cls):
+        return instance.__dict__[self.name]
+
+    def __set__(self, instance, value):
+        old_value = instance.__dict__.get(self.name, None)
+
+        if not old_value is None:
+            instance.propchanged(self, old_value, value)
+
+        instance.__dict__[self.name] = value
+
+
+class AgentMeta(type):
+    def __new__(mcls, name, bases, clsdict):
+        props = [(name, val) for name, val in clsdict.items()
+                 if isinstance(val, Property)]
+
+        for name, prop in props:
+            prop.name = name
+
+        clsprops = []
+        for base in bases:
+            clsprops.extend(getattr(base, 'properties', []))
+        clsprops.extend(prop for _, prop in props)
+        clsdict['properties'] = clsprops
+
+        clsobj = super().__new__(mcls, name, bases, clsdict)
+        return clsobj
+
+
+class Agent(metaclass=AgentMeta):
+    def __new__(cls):
+        new = super().__new__(cls)
+
+        for prop in new.properties:
+            setattr(new, prop.name, prop.value_producer())
+
+        return new
+
     def __init__(self, name=None):
         if name is None:
             self.name = data.random_noun("names")
         else:
             self.name = name
-        self.result = []
-        for attr_name, attr_short_name, attr_value_producer in self.__attrs__:
-            setattr(self, attr_name, attr_value_producer())
+
+    def reset(self):
+        self.messages = []
+        self.propchanges = []
 
     def do_action(self, *request):
-        result, self.result = self.result, []
-        yield result
+        yield
+        self.reset()
         pair_agent = yield request
         return pair_agent
 
-    def debug_info(self):
-        return {s: getattr(self,n) for n,s,_ in self.__attrs__ if s}
-
     def say(self, message, *args):
-        message = message.format(*args)
-        self.result.append((self, message))
+        self.messages.append(message.format(*args))
+
+    def propchanged(self, prop, old_value, new_value):
+        if prop.short_name:
+            self.propchanges.append((prop.short_name, old_value, new_value))
 
     def roll(self, chance):
         return random.randint(1, 100) <= chance
+
+    def propvalues(self):
+        return {prop.short_name: getattr(self, prop.name)
+                for prop in self.properties if prop.short_name}
 
     @action
     def wait(self):
@@ -70,18 +118,37 @@ class Agent:
 
 
 class TextRenderer:
-    def __init__(self, file=sys.stdout, show_debug=False):
+    def __init__(self, file=sys.stdout, show_debug=False, show_changes=False):
         self.file = file
         self.show_debug = show_debug
+        self.show_changes = show_changes
 
-    def render(self, results):
-        for agent, message in results:
+    def render(self, agents):
+        for agent in agents:
             if self.show_debug:
-                debug_str = utils.pretty_print(agent.debug_info())
+                debug_str = utils.pretty_print(agent.propvalues())
             else:
                 debug_str = ""
-            print("{:>15}{}  {}.".format(agent.name.upper(), debug_str, message),
-                  file=self.file)
+
+            if self.show_changes:
+                def format_change(prop, old_value, new_value):
+                    if new_value > old_value:
+                        return prop + "+" + str(new_value - old_value)
+                    else:
+                        return prop + "-" + str(old_value - new_value)
+                change_str = " ".join(format_change(*change) for change in agent.propchanges)
+                change_str = "[" + change_str + "]"
+            else:
+                change_str = ""
+
+            head_len = None
+            for message in agent.messages:
+                if not head_len:
+                    head = "{:>15}{}{}  ".format(agent.name.upper(), debug_str, change_str)
+                    head_len = len(head)
+                    print(head + message, file=self.file)
+                else:
+                    print(" " * head_len + message, file=self.file)
 
         print(file=self.file)
 
@@ -138,8 +205,7 @@ class World:
 
         responses = self.produce_responses(requests)
 
-        results = []
         for agent, live in zip(self.agents, self.lives):
-            results.extend(live.send(responses[agent]))
+            live.send(responses[agent])
 
-        self.renderer.render(results)
+        self.renderer.render(self.agents)
