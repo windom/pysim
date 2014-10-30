@@ -1,5 +1,4 @@
 import random
-import collections
 
 import data
 import sim
@@ -10,7 +9,7 @@ class Coder(sim.Agent):
 
     caffeine = sim.Property("caf", lambda: 5)
     codelines = sim.Property("cod", lambda: 0)
-    relation = sim.Property("", lambda: collections.defaultdict(int))
+    relation = sim.Property("rel", lambda: sim.Dict(int))
 
     @action(shares("coffe"))
     def drink_coffee(self, pair=None):

@@ -5,6 +5,7 @@ import sys
 
 import data
 import utils
+import tracked
 
 
 requestItem = collections.namedtuple('requestItem','code needs offers condition')
@@ -32,42 +33,22 @@ def action(func, *request):
     return wrapped
 
 
-class Property:
+class Property(tracked.Property):
     def __init__(self, short_name, value_producer):
         self.short_name = short_name
         self.value_producer = value_producer
 
-    def __get__(self, instance, cls):
-        return instance.__dict__[self.name]
 
-    def __set__(self, instance, value):
-        old_value = instance.__dict__.get(self.name, None)
+class Dict(tracked.Dict):
+    def __init__(self, value_producer=None):
+        super().__init__(collections.defaultdict(value_producer))
 
-        if not old_value is None:
-            instance.propchanged(self, old_value, value)
-
-        instance.__dict__[self.name] = value
+    def __repr__(self):
+        # massively inefficient way to simply defaultdict's repr
+        return repr(dict(self.base))
 
 
-class AgentMeta(type):
-    def __new__(mcls, name, bases, clsdict):
-        props = [(name, val) for name, val in clsdict.items()
-                 if isinstance(val, Property)]
-
-        for name, prop in props:
-            prop.name = name
-
-        clsprops = []
-        for base in bases:
-            clsprops.extend(getattr(base, 'properties', []))
-        clsprops.extend(prop for _, prop in props)
-        clsdict['properties'] = clsprops
-
-        clsobj = super().__new__(mcls, name, bases, clsdict)
-        return clsobj
-
-
-class Agent(metaclass=AgentMeta):
+class Agent(tracked.Class):
     def __new__(cls):
         new = super().__new__(cls)
 
@@ -95,9 +76,22 @@ class Agent(metaclass=AgentMeta):
     def say(self, message, *args):
         self.messages.append(message.format(*args))
 
-    def propchanged(self, prop, old_value, new_value):
-        if prop.short_name:
-            self.propchanges.append((prop.short_name, old_value, new_value))
+    def __changed__(self, props, old_value, new_value):
+        if old_value is None:
+            return
+
+        if not old_value is None:
+            new_props = []
+            for prop in props:
+                if isinstance(prop, Property):
+                    if prop.short_name:
+                        new_props.append(prop.short_name)
+                    else:
+                        return
+                else:
+                    new_props.append(str(prop))
+
+        self.propchanges.append((".".join(new_props), old_value, new_value))
 
     def roll(self, chance):
         return random.randint(1, 100) <= chance
