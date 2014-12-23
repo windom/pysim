@@ -80,16 +80,15 @@ class Agent(tracked.Class):
         if old_value is None:
             return
 
-        if not old_value is None:
-            new_props = []
-            for prop in props:
-                if isinstance(prop, Property):
-                    if prop.short_name:
-                        new_props.append(prop.short_name)
-                    else:
-                        return
+        new_props = []
+        for prop in props:
+            if isinstance(prop, Property):
+                if prop.short_name:
+                    new_props.append(prop.short_name)
                 else:
-                    new_props.append(str(prop))
+                    return
+            else:
+                new_props.append(str(prop))
 
         self.propchanges.append((".".join(new_props), old_value, new_value))
 
