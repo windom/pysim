@@ -43,8 +43,7 @@ class ref:
         yield from rules.gen(self.name)
 
     def __repr__(self):
-        return "{}({!r})".format(type(self).__name__,
-                                 self.name_prefix + self.name)
+        return "{}({!r})".format(type(self).__name__, self.name)
 
 
 def rule(token):
