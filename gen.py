@@ -2,11 +2,12 @@ import random
 import itertools
 
 import utils
+from mux import smux as mux
 
 
 class tok:
     def __init__(self, text):
-        self.text = text
+        self.text = mux(text)
 
     def gen(self, rules):
         yield self.text
@@ -37,7 +38,7 @@ class ref:
     name_prefix = '@'
 
     def __init__(self, name):
-        self.name = name
+        self.name = mux(name)
 
     def gen(self, rules):
         yield from rules.gen(self.name)
@@ -58,13 +59,13 @@ def rule(token):
 
 class rules(dict):
     def __init__(self, ruledict={}):
-        super().__init__({key: rule(value) for key, value in ruledict.items()})
+        super().__init__({mux(key): rule(value) for key, value in ruledict.items()})
 
     def __getitem__(self, key):
         return self.postprocess(list(self.gen(key)))
 
     def __setitem__(self, key, value):
-        super().__setitem__(key, rule(value))
+        super().__setitem__(mux(key), rule(value))
 
     def gen(self, key):
         return super().__getitem__(key).gen(self)
@@ -81,6 +82,9 @@ class rules(dict):
                 return tok
         return " ".join(map(prepare, zip(tokens, tokens[1:] + ["x"])))
 
+###########################################################################
+
+mux = lambda s: s
 
 hello = rules({
     "nev": alt("Gabor", "Jozsi", "Pista"),
@@ -90,5 +94,5 @@ hello = rules({
     "veg": "locsics"
     })
 
-print(hello["ketudv"])
+print(hello[mux("ketudv")])
 print(utils.wrap_lines(repr(hello), 80))
