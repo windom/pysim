@@ -1,5 +1,6 @@
 import random
 import itertools
+import functools
 
 import utils
 from mux import smux as mux
@@ -47,14 +48,24 @@ class ref:
         return "{}({!r})".format(type(self).__name__, self.name)
 
 
+@functools.singledispatch
 def rule(token):
-    if isinstance(token, str):
-        if token[0] == ref.name_prefix:
-            return ref(token[1:])
-        else:
-            return tok(token)
+    return token
+
+@rule.register(str)
+def _(token):
+    if token[0] == ref.name_prefix:
+        return ref(token[1:])
     else:
-        return token
+        return tok(token)
+
+@rule.register(list)
+def _(tokens):
+    return alt(*tokens)
+
+@rule.register(tuple)
+def _(tokens):
+    return seq(*tokens)
 
 
 class rules(dict):
@@ -87,10 +98,10 @@ class rules(dict):
 mux = lambda s: s
 
 hello = rules({
-    "nev": alt("Gabor", "Jozsi", "Pista"),
-    "dolog": alt("stajsz","dolog","helyzet","allas"),
-    "udvozles": seq(alt("Hello", "Szia", "Cso"), "@nev", "mi","$a", "@dolog"),
-    "ketudv": seq("@udvozles","@veg"),
+    "nev": ["Gabor", "Jozsi", "Pista"],
+    "dolog": ["stajsz", "dolog", "helyzet", "allas"],
+    "udvozles": (["Hello", "Szia", "Cso"], "@nev", "mi", "$a", "@dolog"),
+    "ketudv": ("@udvozles", "@veg"),
     "veg": "locsics"
     })
 
